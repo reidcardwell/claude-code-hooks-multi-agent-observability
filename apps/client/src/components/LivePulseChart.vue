@@ -1,25 +1,61 @@
 <template>
-  <div class="bg-gradient-to-r from-[var(--theme-bg-primary)] to-[var(--theme-bg-secondary)] px-3 py-4 mobile:py-3 shadow-lg">
-    <div class="flex items-center justify-between mb-3 mobile:flex-col mobile:space-y-2 mobile:items-start">
-      <h3 class="text-base mobile:text-sm font-bold text-[var(--theme-primary)] drop-shadow-sm flex items-center">
-        <span class="mr-1.5 text-xl mobile:text-base">📊</span>
-        Live Activity Pulse
-      </h3>
-      <div class="flex gap-1.5 mobile:w-full mobile:justify-center" role="tablist" aria-label="Time range selector">
+  <div class="bg-gradient-to-r from-[var(--theme-bg-primary)] to-[var(--theme-bg-secondary)] px-3 py-4 mobile:py-2 shadow-lg">
+    <div class="flex items-center justify-between mb-3 mobile:mb-2">
+      <div class="flex items-center gap-3 mobile:gap-2">
+        <h3 class="text-base mobile:text-xs font-bold text-[var(--theme-primary)] drop-shadow-sm flex items-center">
+          <span class="mr-1.5 mobile:mr-1 text-xl mobile:text-sm">📊</span>
+          <span class="mobile:hidden">Live Activity Pulse</span>
+        </h3>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <div
+            class="flex items-center gap-1.5 px-2 py-1 bg-gradient-to-r from-[var(--theme-primary)]/10 to-[var(--theme-primary-light)]/10 rounded-lg border border-[var(--theme-primary)]/30 shadow-sm"
+            :title="`${uniqueAgentCount} active agent${uniqueAgentCount !== 1 ? 's' : ''}`"
+          >
+            <span class="text-lg mobile:text-base">👥</span>
+            <span class="text-sm mobile:text-xs font-bold text-[var(--theme-primary)]">{{ uniqueAgentCount }}</span>
+            <span class="text-xs mobile:text-[10px] text-[var(--theme-text-tertiary)] font-medium mobile:hidden">agents</span>
+          </div>
+          <div
+            class="flex items-center gap-1.5 px-2 py-1 bg-[var(--theme-bg-tertiary)] rounded-lg border border-[var(--theme-border-primary)] shadow-sm"
+            :title="`Total events in the last ${timeRange === '1m' ? '1 minute' : timeRange === '3m' ? '3 minutes' : timeRange === '5m' ? '5 minutes' : '10 minutes'}`"
+          >
+            <span class="text-lg mobile:text-base">⚡</span>
+            <span class="text-sm mobile:text-xs font-bold text-[var(--theme-text-primary)]">{{ totalEventCount }}</span>
+            <span class="text-xs mobile:text-[10px] text-[var(--theme-text-tertiary)] font-medium mobile:hidden">events</span>
+          </div>
+          <div
+            class="flex items-center gap-1.5 px-2 py-1 bg-[var(--theme-bg-tertiary)] rounded-lg border border-[var(--theme-border-primary)] shadow-sm"
+            :title="`Total tool calls in the last ${timeRange === '1m' ? '1 minute' : timeRange === '3m' ? '3 minutes' : timeRange === '5m' ? '5 minutes' : '10 minutes'}`"
+          >
+            <span class="text-lg mobile:text-base">🔧</span>
+            <span class="text-sm mobile:text-xs font-bold text-[var(--theme-text-primary)]">{{ toolCallCount }}</span>
+            <span class="text-xs mobile:text-[10px] text-[var(--theme-text-tertiary)] font-medium mobile:hidden">tools</span>
+          </div>
+          <div
+            class="flex items-center gap-1.5 px-2 py-1 bg-[var(--theme-bg-tertiary)] rounded-lg border border-[var(--theme-border-primary)] shadow-sm"
+            :title="`Average time between events in the last ${timeRange === '1m' ? '1 minute' : timeRange === '3m' ? '3 minutes' : timeRange === '5m' ? '5 minutes' : '10 minutes'}`"
+          >
+            <span class="text-lg mobile:text-base">🕐</span>
+            <span class="text-sm mobile:text-xs font-bold text-[var(--theme-text-primary)]">{{ formatGap(eventTimingMetrics.avgGap) }}</span>
+            <span class="text-xs mobile:text-[10px] text-[var(--theme-text-tertiary)] font-medium mobile:hidden">avg gap</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-1.5 mobile:gap-1" role="tablist" aria-label="Time range selector">
         <button
           v-for="(range, index) in timeRanges"
           :key="range"
           @click="setTimeRange(range)"
           @keydown="handleTimeRangeKeyDown($event, index)"
           :class="[
-            'px-3 py-1.5 mobile:px-4 mobile:py-2 text-sm mobile:text-base font-bold rounded-lg transition-all duration-200 min-w-[30px] min-h-[30px] flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 border',
+            'px-3 py-1.5 mobile:px-2 mobile:py-1 text-sm mobile:text-xs font-bold rounded-lg transition-all duration-200 min-w-[30px] mobile:min-w-[24px] min-h-[30px] mobile:min-h-[24px] flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 border',
             timeRange === range
               ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary-light)] text-white border-[var(--theme-primary-dark)] drop-shadow-md'
               : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] border-[var(--theme-border-primary)] hover:bg-[var(--theme-bg-quaternary)] hover:border-[var(--theme-primary)]'
           ]"
           role="tab"
           :aria-selected="timeRange === range"
-          :aria-label="`Show ${range === '1m' ? '1 minute' : range === '3m' ? '3 minutes' : '5 minutes'} of activity`"
+          :aria-label="`Show ${range === '1m' ? '1 minute' : range === '3m' ? '3 minutes' : range === '5m' ? '5 minutes' : '10 minutes'} of activity`"
           :tabindex="timeRange === range ? 0 : -1"
         >
           {{ range }}
@@ -73,15 +109,18 @@ const props = defineProps<{
   };
 }>();
 
-// const emit = defineEmits<{
-//   eventClick: [event: HookEvent];
-// }>();
+const emit = defineEmits<{
+  updateUniqueApps: [appNames: string[]];
+  updateAllApps: [appNames: string[]];
+  updateTimeRange: [timeRange: TimeRange];
+}>();
 
 const canvas = ref<HTMLCanvasElement>();
 const chartContainer = ref<HTMLDivElement>();
-const chartHeight = 96; // Reduced by 33% from 144
+const windowHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 600);
+const chartHeight = computed(() => windowHeight.value <= 400 ? 210 : 96);
 
-const timeRanges: TimeRange[] = ['1m', '3m', '5m'];
+const timeRanges: TimeRange[] = ['1m', '3m', '5m', '10m'];
 
 const {
   timeRange,
@@ -89,8 +128,38 @@ const {
   addEvent,
   getChartData,
   setTimeRange,
-  cleanup: cleanupChartData
+  cleanup: cleanupChartData,
+  clearData,
+  uniqueAgentCount,
+  uniqueAgentIdsInWindow,
+  allUniqueAgentIds,
+  toolCallCount,
+  eventTimingMetrics
 } = useChartData();
+
+// Format gap time in ms to readable string (e.g., "125ms" or "1.2s")
+const formatGap = (gapMs: number): string => {
+  if (gapMs === 0) return '—';
+  if (gapMs < 1000) {
+    return `${Math.round(gapMs)}ms`;
+  }
+  return `${(gapMs / 1000).toFixed(1)}s`;
+};
+
+// Watch uniqueAgentIdsInWindow and emit updates (for active agents in time window)
+watch(uniqueAgentIdsInWindow, (agentIds) => {
+  emit('updateUniqueApps', agentIds);
+}, { immediate: true });
+
+// Watch allUniqueAgentIds and emit updates (for all agents ever seen)
+watch(allUniqueAgentIds, (agentIds) => {
+  emit('updateAllApps', agentIds);
+}, { immediate: true });
+
+// Watch timeRange and emit updates
+watch(timeRange, (range) => {
+  emit('updateTimeRange', range);
+}, { immediate: true });
 
 let renderer: ReturnType<typeof createChartRenderer> | null = null;
 let resizeObserver: ResizeObserver | null = null;
@@ -102,10 +171,13 @@ const { getHexColorForSession } = useEventColors();
 
 const hasData = computed(() => dataPoints.value.some(dp => dp.count > 0));
 
+const totalEventCount = computed(() => {
+  return dataPoints.value.reduce((sum, dp) => sum + dp.count, 0);
+});
+
 const chartAriaLabel = computed(() => {
-  const totalEvents = dataPoints.value.reduce((sum, dp) => sum + dp.count, 0);
-  const rangeText = timeRange.value === '1m' ? '1 minute' : timeRange.value === '3m' ? '3 minutes' : '5 minutes';
-  return `Activity chart showing ${totalEvents} events over the last ${rangeText}`;
+  const rangeText = timeRange.value === '1m' ? '1 minute' : timeRange.value === '3m' ? '3 minutes' : timeRange.value === '5m' ? '5 minutes' : '10 minutes';
+  return `Activity chart showing ${totalEventCount.value} events over the last ${rangeText}`;
 });
 
 const tooltip = ref({
@@ -140,7 +212,7 @@ const getDimensions = (): ChartDimensions => {
   const width = chartContainer.value?.offsetWidth || 800;
   return {
     width,
-    height: chartHeight,
+    height: chartHeight.value,
     padding: {
       top: 7,
       right: 7,
@@ -186,9 +258,13 @@ const animateNewEvent = (x: number, y: number) => {
   animate();
 };
 
+const handleWindowResize = () => {
+  windowHeight.value = window.innerHeight;
+};
+
 const handleResize = () => {
   if (!renderer || !canvas.value) return;
-  
+
   const dimensions = getDimensions();
   renderer.resize(dimensions);
   render();
@@ -248,7 +324,16 @@ const processNewEvents = () => {
 };
 
 // Watch for new events
-watch(() => props.events, processNewEvents, { deep: true });
+watch(() => props.events, (newEvents) => {
+  // If events array is empty, clear all internal state
+  if (newEvents.length === 0) {
+    clearData();
+    processedEventIds.clear();
+    render();
+    return;
+  }
+  processNewEvents();
+}, { deep: true });
 
 // Watch for filter changes
 watch(() => props.filters, () => {
@@ -263,6 +348,11 @@ watch(timeRange, () => {
   // Need to re-process all events when time range changes
   // because bucket sizes are different
   render();
+});
+
+// Watch for chart height changes
+watch(chartHeight, () => {
+  handleResize();
 });
 
 const handleMouseMove = (event: MouseEvent) => {
@@ -348,21 +438,24 @@ const themeObserver = new MutationObserver(() => {
 
 onMounted(() => {
   if (!canvas.value || !chartContainer.value) return;
-  
+
   const dimensions = getDimensions();
   const config = getActiveConfig();
-  
+
   renderer = createChartRenderer(canvas.value, dimensions, config);
-  
+
   // Set up resize observer
   resizeObserver = new ResizeObserver(handleResize);
   resizeObserver.observe(chartContainer.value);
-  
+
   // Observe theme changes
   themeObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['class']
   });
+
+  // Listen for window height changes
+  window.addEventListener('resize', handleWindowResize);
   
   // Initial render
   render();
@@ -387,19 +480,22 @@ onMounted(() => {
 
 onUnmounted(() => {
   cleanupChartData();
-  
+
   if (renderer) {
     renderer.stopAnimation();
   }
-  
+
   if (resizeObserver && chartContainer.value) {
     resizeObserver.disconnect();
   }
-  
+
   if (animationFrame) {
     cancelAnimationFrame(animationFrame);
   }
-  
+
   themeObserver.disconnect();
+
+  // Remove window resize listener
+  window.removeEventListener('resize', handleWindowResize);
 });
 </script>
